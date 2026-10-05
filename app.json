@@ -1,15 +1,17 @@
 {
   "expo": {
-    "name": "expo-scaffold",
-    "slug": "expo-scaffold",
+    "name": "GP Autos Mobile",
+    "slug": "gp-autos-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gpautos.mobile"
     },
     "android": {
+      "package": "com.gpautos.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
