@@ -61,6 +61,37 @@ export type CartItem = {
 	vehicle_listing: CartVehicle;
 };
 
+export type OrderItemRequest = {
+	vehicle_listing_id: string;
+	quantity: number;
+};
+
+export type OrderCreateRequest = {
+	items: OrderItemRequest[];
+};
+
+export type OrderRead = {
+	id: string;
+	status: string;
+	currency: string;
+	total: string;
+	customer_email: string;
+	payment_status: string;
+	confirmation_email_sent_at: string | null;
+	created_at: string;
+};
+
+export type PaymentInitializeResponse = {
+	authorization_url: string;
+	reference: string;
+};
+
+export type PaymentVerifyResponse = {
+	order_id: string;
+	order_status: string;
+	payment_status: string;
+};
+
 export class ApiError extends Error {
 	constructor(
 		public readonly status: number | null,
@@ -194,5 +225,33 @@ export const cartApi = {
 
 	clearCart(): Promise<void> {
 		return request<void>('/api/cart', { method: 'DELETE' });
+	},
+};
+
+export const orderApi = {
+	createOrder(payload: OrderCreateRequest): Promise<OrderRead> {
+		return request<OrderRead>('/api/orders', {
+			method: 'POST',
+			body: JSON.stringify(payload),
+		});
+	},
+
+	getOrders(): Promise<OrderRead[]> {
+		return request<OrderRead[]>('/api/orders', { method: 'GET' });
+	},
+};
+
+export const paymentApi = {
+	initialize(orderId: string): Promise<PaymentInitializeResponse> {
+		return request<PaymentInitializeResponse>('/api/payments/initialize', {
+			method: 'POST',
+			body: JSON.stringify({ order_id: orderId }),
+		});
+	},
+
+	verify(reference: string): Promise<PaymentVerifyResponse> {
+		return request<PaymentVerifyResponse>(`/api/payments/verify/${encodeURIComponent(reference)}`, {
+			method: 'GET',
+		});
 	},
 };

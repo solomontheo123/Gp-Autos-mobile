@@ -14,8 +14,17 @@ import {
 	View,
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as WebBrowser from 'expo-web-browser';
 
-import { ApiError, cartApi, vehicleApi, type CartItem, type VehicleListing } from '../config/api';
+import {
+	ApiError,
+	cartApi,
+	orderApi,
+	paymentApi,
+	vehicleApi,
+	type CartItem,
+	type VehicleListing,
+} from '../config/api';
 import { useAuth } from '../auth/AuthProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { buildWhatsAppUrl, GP_AUTOS_WHATSAPP_NUMBER } from '../config/brand';
@@ -98,6 +107,8 @@ export function AuthenticatedApp() {
 	const [sortMode, setSortMode] = useState<SortMode>('recent');
 	const [selectedVehicle, setSelectedVehicle] = useState<VehicleListing | null>(null);
 	const [accountOpen, setAccountOpen] = useState(false);
+	const [pendingPaymentReference, setPendingPaymentReference] = useState<string | null>(null);
+	const [checkoutBusy, setCheckoutBusy] = useState(false);
 
 	const loadVehicles = async () => {
 		setVehiclesLoading(true);
@@ -189,6 +200,74 @@ export function AuthenticatedApp() {
 			setCartBusy(false);
 		}
 	};
+
+	const verifyPendingPayment = async (reference: string) => {
+		try {
+			const result = await paymentApi.verify(reference);
+			if (result.payment_status === 'success' || result.order_status === 'paid') {
+				setPendingPaymentReference(null);
+				setNotice('Payment confirmed. Your order is now paid.');
+				await loadCart();
+				return;
+			}
+			setNotice('Payment is still being checked. Please return to this screen after the browser flow finishes.');
+		} catch (error: unknown) {
+			if (error instanceof ApiError && error.status === 404) {
+				setNotice('Payment reference was not found yet. Please try again in a moment.');
+				return;
+			}
+			setNotice('We could not verify the payment yet. Please return here after completing the Paystack flow.');
+		}
+	};
+
+	const checkoutCart = async () => {
+		if (cart.length === 0) {
+			setCartError('Add a vehicle before checkout.');
+			return;
+		}
+		setCheckoutBusy(true);
+		setCartError(null);
+		try {
+			let order: Awaited<ReturnType<typeof orderApi.createOrder>>;
+			try {
+				order = await orderApi.createOrder({
+					items: cart.map((item) => ({
+						vehicle_listing_id: item.vehicle_listing_id,
+						quantity: item.quantity,
+					})),
+				});
+			} catch (error: unknown) {
+				if (!(error instanceof ApiError) || error.status !== 409) throw error;
+
+				await Promise.all([loadVehicles(), loadCart()]);
+				const detail = error.responseDetail;
+				setCartError(
+					detail
+						? `${detail} Remove the unavailable vehicle from your cart or choose another vehicle, then try again.`
+						: 'A vehicle in your cart is no longer available. Your cart and vehicle list were refreshed; remove the unavailable vehicle or choose another one, then try again.',
+				);
+				return;
+			}
+			const payment = await paymentApi.initialize(order.id);
+			setPendingPaymentReference(payment.reference);
+			setNotice('Paystack opened in your browser. Return here after payment to verify it.');
+			await WebBrowser.openBrowserAsync(payment.authorization_url);
+		} catch (error: unknown) {
+			setCartError(messageFor(error));
+		} finally {
+			setCheckoutBusy(false);
+		}
+	};
+
+	useEffect(() => {
+		if (!pendingPaymentReference) return;
+		const subscription = AppState.addEventListener('change', async (nextState) => {
+			if (nextState === 'active') {
+				await verifyPendingPayment(pendingPaymentReference);
+			}
+		});
+		return () => subscription.remove();
+	}, [pendingPaymentReference]);
 
 	const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
 	const cartSubtotal = cart.reduce((total, item) => total + Number(item.vehicle_listing.price) * item.quantity, 0);
@@ -424,15 +503,25 @@ export function AuthenticatedApp() {
 								<Text style={styles.summaryLabel}>Current listed total</Text>
 								<Text style={styles.summaryAmount}>{formatPrice(String(cartSubtotal), cart[0]?.vehicle_listing.currency ?? 'NGN')}</Text>
 							</View>
-							<Pressable
-								accessibilityRole="button"
-								disabled={cartBusy || cartLoading}
-								onPress={() => void clearCart()}
-								style={[styles.clearButton, (cartBusy || cartLoading) && styles.disabledButton]}
-							>
-								<MaterialCommunityIcons name="delete-outline" size={17} color={colors.danger} />
-								<Text style={styles.clearButtonText}>{cartBusy ? 'Clearing…' : 'Clear cart'}</Text>
-							</Pressable>
+							<View style={styles.checkoutActions}>
+								<Pressable
+									accessibilityRole="button"
+									disabled={cartBusy || cartLoading || checkoutBusy}
+									onPress={() => void clearCart()}
+									style={[styles.clearButton, (cartBusy || cartLoading || checkoutBusy) && styles.disabledButton]}
+								>
+									<MaterialCommunityIcons name="delete-outline" size={17} color={colors.danger} />
+									<Text style={styles.clearButtonText}>{cartBusy ? 'Clearing…' : 'Clear cart'}</Text>
+								</Pressable>
+								<Pressable
+									accessibilityRole="button"
+									disabled={cartBusy || cartLoading || checkoutBusy}
+									onPress={() => void checkoutCart()}
+									style={[styles.checkoutButton, (cartBusy || cartLoading || checkoutBusy) && styles.disabledButton]}
+								>
+									<Text style={styles.checkoutButtonText}>{checkoutBusy ? 'Preparing…' : 'Checkout'}</Text>
+								</Pressable>
+							</View>
 						</View>
 					) : null}
 				</ScrollView>
@@ -791,6 +880,9 @@ const styles = StyleSheet.create({
 	cartSummary: { alignItems: 'center', borderTopColor: colors.border, borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, paddingTop: 15 },
 	summaryLabel: { color: colors.muted, fontSize: 10 },
 	summaryAmount: { color: colors.accent, fontSize: 17, fontWeight: '800', marginTop: 4 },
+	checkoutActions: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+	checkoutButton: { alignItems: 'center', backgroundColor: colors.accent, borderRadius: 10, justifyContent: 'center', minHeight: 44, paddingHorizontal: 14 },
+	checkoutButtonText: { color: '#071718', fontSize: 12, fontWeight: '900' },
 	state: { alignItems: 'center', gap: 12, paddingVertical: 36 },
 	stateText: { color: colors.muted, fontSize: 13, lineHeight: 20 },
 	messagePanel: { alignItems: 'center', backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 8, borderWidth: 1, gap: 12, marginTop: 12, padding: 20 },
