@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <path d="M 239 121 C 217 102 190 92 160 92 C 94 92 53 138 53 205 C 53 274 96 318 160 318 C 218 318 255 283 258 229 H 190" fill="none" stroke="#63e6dc" stroke-linecap="round" stroke-linejoin="round" stroke-width="25" />
+  <path d="M 280 331 V 171 M 280 196 C 280 163 297 143 324 143 C 354 143 371 163 371 196 C 371 229 352 249 324 249 C 298 249 280 229 280 196" fill="none" stroke="#63e6dc" stroke-linecap="round" stroke-linejoin="round" stroke-width="20" />
+  <text x="256" y="432" fill="#f2f7f6" font-family="DejaVu Sans, sans-serif" font-size="34" font-weight="700" letter-spacing="7" text-anchor="middle">GP AUTOS</text>
+</svg>

@@ -2,6 +2,8 @@
 
 This repository contains the standalone Expo + React Native client for the existing GP Autos production backend.
 
+Original GP Autos app source, visual design, branding, and content are copyright (c) 2026 Solomon Theophilus. See [COPYRIGHT.md](COPYRIGHT.md) for scope and third-party exclusions.
+
 ## API target
 
 The app connects only to the live backend at:

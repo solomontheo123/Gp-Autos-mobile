@@ -4,7 +4,7 @@
     "slug": "gp-autos-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/gp-autos-splash.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
@@ -13,10 +13,10 @@
     "android": {
       "package": "com.gpautos.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/gp-autos-splash.png",
+        "backgroundImage": "./assets/gp-autos-splash.png",
+        "monochromeImage": "./assets/gp-autos-splash.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -25,7 +25,21 @@
     },
     "plugins": [
       "expo-font",
-      "expo-web-browser"
-    ]
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#000000",
+          "image": "./assets/gp-autos-splash.png",
+          "imageWidth": 180
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5702b097-ca82-46b3-8648-cf9642b79919"
+      }
+    },
+    "owner": "solomon-theophilus"
   }
 }
